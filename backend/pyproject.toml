@@ -1,0 +1,16 @@
+[project]
+name = "livora-backend"
+version = "0.1.0"
+description = "Backend ADK agents for LIVORA"
+requires-python = ">=3.10"
+dependencies = [
+    "google-genai",
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "supabase",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
