@@ -21,12 +21,6 @@ from google.genai import types
 import json
 import requests
 import datetime
-import threading
-import asyncio
-import contextlib
-import sys
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
 
 load_dotenv()
 
@@ -183,55 +177,17 @@ def get_shopping_list() -> str:
         return "🛒 Shopping List:\n" + "\n".join(items)
     except Exception as e:
         return f"Error: {str(e)}"
-class MCPClientBridge:
-    def __init__(self):
-        self.loop = asyncio.new_event_loop()
-        self.thread = threading.Thread(target=self._start_loop, daemon=True)
-        self.thread.start()
-        
-        server_path = os.path.join(os.path.dirname(__file__), "..", "mcp_server.py")
-        self.server_params = StdioServerParameters(
-            command=sys.executable,
-            args=[server_path]
-        )
-        self.session = None
-        
-        try:
-            future = asyncio.run_coroutine_threadsafe(self._init_mcp(), self.loop)
-            future.result(timeout=10)
-            print("✅ MCP: Successfully connected to mcp_server.py via Stdio")
-        except Exception as e:
-            print(f"❌ MCP Connection Error: {e}")
-
-    def _start_loop(self):
-        asyncio.set_event_loop(self.loop)
-        self.loop.run_forever()
-
-    async def _init_mcp(self):
-        self._exit_stack = contextlib.AsyncExitStack()
-        read, write = await self._exit_stack.enter_async_context(stdio_client(self.server_params))
-        self.session = await self._exit_stack.enter_async_context(ClientSession(read, write))
-        await self.session.initialize()
-
-    def call_tool_sync(self, name: str, arguments: dict):
-        if not self.session:
-            return f"MCP session not initialized for {name}"
-        try:
-            future = asyncio.run_coroutine_threadsafe(
-                self.session.call_tool(name, arguments=arguments), 
-                self.loop
-            )
-            result = future.result(timeout=15)
-            return result.content[0].text
-        except Exception as e:
-            return f"MCP Tool Error: {e}"
-
-mcp_bridge = MCPClientBridge()
-
 def get_live_weather(city: str) -> str:
-    """Gets the current weather for a specific city via MCP Server."""
+    """Gets the current weather for a specific city."""
     if not city: return "Unknown city."
-    return mcp_bridge.call_tool_sync("get_weather", {"city": city})
+    try:
+        response = requests.get(f"https://wttr.in/{city}?format=j1", timeout=5)
+        data = response.json()
+        temp = data['current_condition'][0]['temp_C']
+        desc = data['current_condition'][0]['weatherDesc'][0]['value']
+        return f"Weather in {city}: {temp}°C, {desc}"
+    except Exception as e:
+        return f"Could not fetch weather for {city}."
 
 
 

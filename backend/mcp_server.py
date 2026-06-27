@@ -185,4 +185,4 @@ def save_meal_to_history(meal_name: str, meal_type: str, user_id: str = "0000000
         return "Could not save meal"
 
 if __name__ == "__main__":
-    mcp.run(transport='sse')
+    mcp.run()

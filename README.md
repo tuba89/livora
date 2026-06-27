@@ -1,129 +1,183 @@
 <div align="center">
-  <img src="livora_banner.png" width="200" alt="LIVORA Logo" />
+  <img src="frontend/public/logo.png" alt="LIVORA Logo" width="150" height="150" style="border-radius: 50%; box-shadow: 0 0 20px rgba(168,85,247,0.5);">
   <h1>LIVORA: I Built JARVIS for Working Mothers</h1>
+  <p><em>A mobile-first AI Life Intelligence System 
+powered by Google ADK multi-agent architecture 
+— because every woman deserves an intelligent 
+assistant that knows her, remembers her, 
+and never lets her down.</em></p>
+  
+  [![License: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
+  [![Made with Gemini](https://img.shields.io/badge/Made%20with-Gemini%202.5-teal.svg)](https://deepmind.google/technologies/gemini/)
+  [![Framework: FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688.svg)](https://fastapi.tiangolo.com/)
+  [![Framework: React](https://img.shields.io/badge/Frontend-React-61DAFB.svg)](https://reactjs.org/)
 </div>
 
-<br>
+---
 
-> **Kaggle 5-Day AI Agents Capstone | Concierge Agents Track**
-> 
-> *A mobile-first AI Life Intelligence System powered by Google ADK multi-agent architecture — because every woman deserves an intelligent assistant that knows her, remembers her, and never lets her down.*
+## 💜 Why I Built LIVORA
 
-## ✦ Why I Built LIVORA
+I am a fullstack developer working from home.
+I am also a wife and a mother.
 
-I am a fullstack developer working from home. I am also a wife and a mother.
-
-Every single day I face the same exhausting questions:
+Every single day I face the same 
+exhausting questions:
 - What should I cook tonight?
 - Did I forget any appointments?
 - When do I clean? When do I work?
 - I am running late again...
 
-I searched for an AI assistant that truly understood my life. Not a generic chatbot. Not another recipe app.
+I searched for an AI assistant that 
+truly understood my life. 
+Not a generic chatbot. 
+Not another recipe app.
 
-Something that KNOWS me. That REMEMBERS me. That manages my entire life intelligently.
+Something that KNOWS me. 
+That REMEMBERS me. 
+That manages my entire life intelligently.
 
 I did not find it. So I built it.
 
-This is LIVORA. She is the assistant I always needed.
+This is LIVORA. 
+She is the assistant I always needed.
+
+> *'Tony Stark had JARVIS.  
+> Working mothers have LIVORA.'*
 
 ---
 
-## ◈ Architecture
+## ✦ The Pitch: Problem, Solution, Value
 
-LIVORA is built on a robust multi-agent graph architecture powered by Google's ADK and Gemini 1.5 Flash. The system is designed for progressive disclosure, meaning specialized sub-agents are only invoked when their specific domain expertise is required, keeping token usage minimal and responses lightning-fast.
+### **The Problem: The Fragmented Digital Life**
+We live in an era where our digital lives are scattered across a dozen disconnected apps: calendar apps for scheduling, weather apps for conditions, note-taking apps for groceries, task managers for work, and search engines for information. No system understands the *context* of who you are or connects these dots for you automatically.
+
+### **The Solution: LIVORA**
+LIVORA is a singular, Jarvis-like artificial intelligence designed to be the ultimate **Life Orchestrator**. Rather than forcing you to interact with ten different apps, LIVORA acts as your unified interface. You simply talk or type to her, and she delegates your request to a suite of highly specialized **Sub-Agents**.
+
+### **Why Agents?**
+A standard LLM is just a conversationalist; it cannot *do* things. By utilizing a **Multi-Agent System**, LIVORA transforms from a chatbot into a digital assistant that takes *action*. Her specialized sub-agents have direct access to database tools, external APIs, and memory storage. This means she doesn't just suggest a recipe—she immediately adds the missing ingredients to your real database shopping list. 
+
+---
+
+## ◈ Technical Architecture
+
+LIVORA utilizes a modern, serverless-ready stack with bidirectional streaming architecture.
 
 ```mermaid
-graph TD
-    User([User Mobile Device]) --> |Voice / Text| Frontend(React + Vite UI)
-    Frontend --> |FastAPI| Backend[Backend API]
+graph TD;
+    User[User Interface] -->|React & WebSockets| Frontend(Vite React Frontend);
+    Frontend -->|REST + Audio PCM Stream| Backend(FastAPI Backend);
     
-    Backend --> Orchestrator{LIVORA Orchestrator}
+    subgraph Multi-Agent System [LIVORA ADK Wrapper]
+    Router[Intelligent Router]
+    HomeAgent[Home Agent]
+    WorkAgent[Work & Family Agent]
+    SearchAgent[Search & Knowledge Agent]
+    Memory[J.A.R.V.I.S. Permanent Memory]
+    end
     
-    Orchestrator --> |Routing| Home[Home Agent]
-    Orchestrator --> |Routing| Work[Work Agent]
-    Orchestrator --> |Routing| Family[Family Agent]
-    Orchestrator --> |Routing| General[J.A.R.V.I.S. Memory Agent]
+    Backend --> Router;
+    Router -->|Context + Prompt| HomeAgent;
+    Router -->|Context + Prompt| WorkAgent;
+    Router -->|Context + Prompt| SearchAgent;
     
-    Home --> |Skills| Supabase[(Supabase DB)]
-    Work --> |Skills| Supabase
-    Family --> |Skills| Supabase
+    HomeAgent -.->|MCP Tools| DB[(Supabase DB)];
+    WorkAgent -.->|MCP Tools| DB;
+    SearchAgent -.->|MCP Tools| GoogleSearch((Google Grounding));
     
-    General <--> |Fetch / Save Context| Memory[(user_memory Table)]
-    
-    Orchestrator <--> |Tool Call| MCP[FastMCP Server]
-    MCP --> Weather[wttr.in Weather API]
-    MCP --> News[NewsAPI.org]
+    Memory -->|Injects Profile| Router;
 ```
 
-## ✦ Key Features (The "Real LIVORA" Vision)
+---
 
-1. **The Automatic Morning Briefing**
-   - Automatically detects your location via the HTML5 Geolocation API.
-   - Fetches live weather for your city and personalized news headlines using the internal **FastMCP Server**.
-   - Compiles your daily pending tasks from the database and delivers a beautiful, Markdown-formatted briefing as soon as you open the app.
+## ◈ Capstone Requirements & Evaluation
 
-2. **J.A.R.V.I.S. Persistent Memory**
-   - LIVORA silently extracts personal facts (e.g., "I work late on Tuesdays", "I'm vegan") and saves them to a `user_memory` Supabase table.
-   - The Orchestrator automatically injects your Profile into every agent's context, so LIVORA always knows exactly who she is talking to.
+This project was built for the 5-Day AI Agents Hackathon and strictly implements the following key concepts:
 
-3. **Multi-Agent Orchestration (Google ADK)**
-   - **Main Orchestrator**: Analyzes user intent and routes to specialized sub-agents.
-   - **Home Agent**: Plans meals and manages shopping lists using the `meal-planner` Skill.
-   - **Work Agent**: Manages deadlines and to-do lists using the `task-manager` Skill.
-   - **Family Agent**: Manages calendar appointments.
+### 1. Agent / Multi-Agent System (ADK)
+LIVORA is built on a custom **Agent Development Kit (ADK)** wrapper (`LIVORAAgentDevelopmentKit` in `livora_orchestrator.py`). The ADK handles agent registration, intelligent intent routing, and automatic context injection. When you ask a question, the Router classifies it and delegates it to the correct specialized sub-agent (Home, Work, Family, or General).
 
-4. **Voice Interface (Web Speech API)**
-   - A sleek microphone UI allows you to speak directly to LIVORA. She transcribes your audio and executes commands hands-free.
+### 2. MCP Server
+LIVORA utilizes the **Model Context Protocol (MCP)** to expose external capabilities to the LLM securely. The backend features a standalone `mcp_server.py` built with `FastMCP` that provides 13 distinct tools (weather, memory saving, task management, meal planning, etc.) completely isolated from the agent reasoning loop.
 
-## ■ The Capstone Checkpoints
+### 3. Agent Skills (Agents CLI)
+The project utilizes structured agent skills located in `.agents/skills/`. Each sub-agent (Meal Planner, Morning Briefing, Shopping List, Task Manager) has a dedicated `SKILL.md` defining its strict behavioral logic, constraints, and instructions, fully utilizing YAML frontmatter for programmatic parsing.
 
-- [x] **Agent / Multi-agent system (ADK)**: Built a complex routing graph orchestrating 4 distinct domain agents, powered by `gemini-2.5-flash` and Google Search Grounding.
-- [x] **MCP Server**: Built a custom FastMCP server (`mcp_server.py`) exposing a massive 10-Tool suite (Weather, News, Memory, Calendar Agenda, Shopping).
-- [x] **Security Features**: Secured Postgres database using strict Row Level Security (RLS) policies and implemented rigorous `.env` secret management.
-- [x] **Agent Skills**: Built 3 custom `SKILL.md` files for meal-planning, task-management, and morning-briefing. 
-- [x] **Deployability**: Fully PWA-ready with Vercel and Railway deployment configurations.
-- [x] **Agentic UI**: Built a stunning glassmorphic React interface featuring Multimodal Camera input (Vision) and Voice Text-To-Speech (Web Speech API).
+### 4. Deployability
+LIVORA is designed for a split-stack serverless deployment:
+- **Frontend:** Pre-configured for deployment on **Vercel** (`vercel.json` included).
+- **Backend:** Pre-configured for deployment on **Railway** or **Render** (`render.yaml` included), complete with dynamic `VITE_API_URL` environment variables to auto-switch between localhost and production.
 
-## ⯈ Live Deployment Guide
+### 5. Security Features
+LIVORA implements critical security features:
+- **Strict Environment Variables**: No API keys or Supabase credentials are hardcoded. Everything is loaded securely via `.env`.
+- **MCP Tool Isolation**: The LLM cannot execute arbitrary code; it can only request execution of the strictly defined tools exposed via the MCP server.
+- **Quota Tracking**: The backend features a strict database-level quota tracker that limits premium Layer 1 TTS requests to 20 per day, protecting the system from API abuse and unexpected free-tier billing.
 
-LIVORA is production-ready for the cloud. Follow these steps to host your own:
+### 6. Antigravity (Advanced Features)
+- **Bidirectional Live Audio**: Implemented `gemini-2.5-flash-native-audio-dialog` via a custom WebSocket proxy in FastAPI. You can hold a mic button, stream raw 16kHz PCM audio to the backend, and hear LIVORA's response streamed back *in real-time*.
+- **Vision Integration**: Users can upload images (e.g., a photo of their fridge) directly to the chat, and the agent will use Gemini Multimodal capabilities to identify ingredients and suggest recipes.
 
-### 1. Deploy the Backend (Railway.app)
-1. Fork this repository.
-2. Go to [Railway.app](https://railway.app/) and create a new project from your repo.
-3. Select the `backend` folder as the root directory.
-4. Add the Environment Variables from `.env.example` (Supabase, Gemini).
-5. Railway will automatically detect FastAPI and deploy the API securely.
+---
 
-### 2. Deploy the Frontend & PWA (Vercel)
-1. Go to [Vercel.com](https://vercel.com/) and import your repo.
-2. Set the Root Directory to `frontend`.
-3. Vercel automatically detects Vite and React. 
-4. **Important**: Update `App.jsx` fetch URLs to point to your new Railway backend URL instead of `localhost:8000`.
-5. Deploy! LIVORA will now be available globally, and users can "Add to Home Screen" as a native PWA App.
+## ⯈ Setup Instructions
 
-## ⯈ Local Setup Instructions
+### 1. Prerequisites
+- Python 3.10+
+- Node.js 18+
+- A Google Gemini API Key
+- A Supabase Project (URL and Anon Key)
 
-1. **Database Setup (Supabase)**
-   Create the following tables: `user_profile`, `user_memory`, `daily_briefing`, `meals`, `shopping_lists`, `tasks`, `appointments`.
-2. **Backend Setup**
-   ```bash
-   cd backend
-   python -m venv .venv
-   .\.venv\Scripts\Activate.ps1
-   pip install -r requirements.txt
-   python main.py
-   ```
-3. **Frontend Setup**
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
+### 2. Backend Setup
+```bash
+cd backend
+python -m venv .venv
+source .venv/Scripts/activate  # (or .venv/bin/activate on Mac/Linux)
+pip install -r requirements.txt
+pip install mcp fastmcp
+```
+Create a `.env` file in the `backend/` directory:
+```env
+GEMINI_API_KEY=your_google_key
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_anon_key
+```
+Start the backend server:
+```bash
+python main.py
+```
 
-## 🔮 Future Vision
-- Native iOS/Android app wrappers for true mobile background execution.
-- Camera fridge scanning (Gemini Vision) to auto-generate meal plans.
-- Multi-language support (Arabic/French/English) switching dynamically based on user profile.
-- 10,000 working mothers reclaiming their time using LIVORA.
+### 3. Frontend Setup
+```bash
+cd frontend
+npm install
+```
+Start the frontend dev server:
+```bash
+npm run dev
+```
+
+---
+
+## ◈ LIVORA In Action
+
+### Desktop Command Center
+![Desktop View](frontend/public/screenshots/desktop_view.png)
+
+### Mobile Experience  
+![Mobile View](frontend/public/screenshots/mobile_view.png)
+
+### Memory In Action
+![Memory Feature](frontend/public/screenshots/memory_action.png)
+
+### Live Voice Mode
+![Voice Mode](frontend/public/screenshots/live_voice.png)
+
+### Morning Briefing
+![Morning Briefing](frontend/public/screenshots/morning_briefing.png)
+
+---
+
+## ⯈ Future Vision
+
+While LIVORA currently acts as a powerful personal life orchestrator, the future vision is to expand her capabilities to **Smart Home Hardware Integration**. By building out additional MCP servers, LIVORA will be able to interface with Home Assistant, controlling Philips Hue lights, Nest thermostats, and smart locks based purely on conversational context. Additionally, expanding the J.A.R.V.I.S. memory system to proactively text or email the user (using the Gmail/Twilio APIs) will transform LIVORA from a reactive assistant into a truly proactive companion.

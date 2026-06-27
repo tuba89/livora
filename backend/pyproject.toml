@@ -9,6 +9,11 @@ dependencies = [
     "uvicorn",
     "pydantic",
     "supabase",
+    "python-dotenv",
+    "requests",
+    "tenacity",
+    "mcp",
+    "fastmcp",
 ]
 
 [build-system]
