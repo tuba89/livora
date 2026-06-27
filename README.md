@@ -1,6 +1,9 @@
-<img src="frontend/public/logo.png" width="120" align="right" alt="LIVORA Logo" />
+<div align="center">
+  <img src="livora_banner.png" width="200" alt="LIVORA Logo" />
+  <h1>LIVORA: I Built JARVIS for Working Mothers</h1>
+</div>
 
-# LIVORA: I Built JARVIS for Working Mothers
+<br>
 
 > **Kaggle 5-Day AI Agents Capstone | Concierge Agents Track**
 > 
