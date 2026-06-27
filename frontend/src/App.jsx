@@ -65,7 +65,24 @@ function App() {
     return () => clearInterval(interval);
   }, [isLoading]);
 
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+
+  const speak = (text) => {
+    if (!voiceEnabled || !window.speechSynthesis) return;
+    // Strip markdown for clean speech
+    const cleanText = text.replace(/[#*`_]/g, '');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.rate = 1.05;
+    utterance.pitch = 1.1;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Trigger Morning Briefing on first load (5 AM to 11 AM)
   useEffect(() => {
+    const hour = new Date().getHours();
+    // Only trigger if morning
+    if (hour < 5 || hour >= 12) return;
+
     const fetchBriefing = async () => {
       setIsLoading(true);
       try {
@@ -79,6 +96,7 @@ function App() {
         setMessages([
           { id: Date.now(), text: data.response, sender: 'livora' }
         ]);
+        speak(data.response);
       } catch (error) {
         setMessages([
           { id: Date.now(), text: "Good morning! (Offline Mode) I am unable to connect to my servers to fetch your briefing.", sender: 'livora' }
@@ -106,11 +124,17 @@ function App() {
             });
           }
         } catch (e) {
-          console.log("Geolocation failed.");
+          console.log("Geolocation API failed.");
         }
+      }, (error) => {
+        // Fallback if denied or unavailable
+        setMessages(prev => [...prev, { id: Date.now() + 2, text: "I couldn't detect your location to set up your weather feed. What city do you live in?", sender: 'livora' }]);
+        speak("I couldn't detect your location. What city do you live in?");
       });
     }
   }, []);
+
+  const fileInputRef = useRef(null);
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -134,6 +158,7 @@ function App() {
         text: data.response,
         sender: 'livora'
       }]);
+      speak(data.response);
     } catch (error) {
       setMessages(prev => [...prev, {
         id: Date.now() + 1,
@@ -143,6 +168,44 @@ function App() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleImageCapture = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64Image = reader.result;
+      
+      setMessages(prev => [...prev, { id: Date.now(), text: "📸 I sent a photo of my ingredients.", sender: 'user' }]);
+      setIsLoading(true);
+
+      try {
+        const response = await fetch('http://localhost:8000/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: "What meals can I make with the ingredients in this image? Please give me recipes and add missing ingredients to my shopping list.", image: base64Image }),
+        });
+        const data = await response.json();
+        
+        setMessages(prev => [...prev, {
+          id: Date.now() + 1,
+          text: data.response,
+          sender: 'livora'
+        }]);
+        speak(data.response);
+      } catch (err) {
+        setMessages(prev => [...prev, {
+          id: Date.now() + 1,
+          text: "I'm having trouble analyzing that image right now.",
+          sender: 'livora'
+        }]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const startListening = () => {
@@ -167,7 +230,7 @@ function App() {
   return (
     <div className="flex flex-col h-screen max-w-md mx-auto bg-slate-50 relative overflow-hidden font-sans">
       
-      <header className="glass-header text-white p-5 z-10 sticky top-0">
+      <header className="glass-header text-white p-5 z-10 sticky top-0 flex justify-between items-center">
         <div className="flex items-center gap-3">
           <div className="bg-white/20 p-1 rounded-xl backdrop-blur-md shadow-sm">
             <img src="/logo.png" alt="LIVORA" className="w-10 h-10 rounded-lg object-cover" />
@@ -177,6 +240,13 @@ function App() {
             <p className="text-indigo-100 text-xs font-medium tracking-wider uppercase opacity-90">Life Intelligence</p>
           </div>
         </div>
+        <button 
+          onClick={() => setVoiceEnabled(!voiceEnabled)}
+          className={`p-2 rounded-full backdrop-blur-sm transition-colors ${voiceEnabled ? 'bg-indigo-500/30 text-white' : 'bg-gray-500/30 text-gray-300'}`}
+          title="Toggle Voice TTS"
+        >
+          {voiceEnabled ? '🔊' : '🔇'}
+        </button>
       </header>
 
       <main className="flex-1 overflow-y-auto p-5 flex flex-col gap-5 pb-24">
@@ -208,7 +278,23 @@ function App() {
       </main>
 
       <div className="absolute bottom-0 w-full p-4 glass-header border-t border-white/10">
-        <form onSubmit={handleSend} className="relative flex items-center bg-white rounded-full p-1.5 shadow-lg shadow-indigo-900/10 border border-indigo-100/50">
+        <form onSubmit={handleSend} className="relative flex items-center bg-white rounded-full p-1.5 shadow-lg shadow-indigo-900/10 border border-indigo-100/50 gap-1">
+          <input 
+            type="file" 
+            accept="image/*" 
+            capture="environment" 
+            ref={fileInputRef} 
+            onChange={handleImageCapture} 
+            className="hidden" 
+          />
+          <button 
+            type="button"
+            onClick={() => fileInputRef.current.click()}
+            className="p-3 text-indigo-400 hover:bg-indigo-50 hover:text-indigo-600 rounded-full transition-colors"
+            title="Scan Fridge"
+          >
+            📸
+          </button>
           <button 
             type="button"
             onClick={startListening}
@@ -223,7 +309,7 @@ function App() {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Tell LIVORA to orchestrate..."
+            placeholder="Tell LIVORA..."
             className="flex-1 bg-transparent border-none focus:ring-0 text-gray-700 px-2 placeholder-gray-400 text-[15px]"
             disabled={isLoading || isListening}
           />

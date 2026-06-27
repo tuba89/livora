@@ -135,21 +135,7 @@ def get_live_weather(city: str) -> str:
     except Exception as e:
         return f"Could not fetch weather for {city}."
 
-def get_personalized_news(interests: str) -> str:
-    """Gets top news headlines based on user interests."""
-    api_key = os.getenv("NEWS_API_KEY")
-    if not api_key: return "News API key not configured."
-    query = interests if interests else "general"
-    try:
-        response = requests.get(f"https://newsapi.org/v2/top-headlines?q={query}&apiKey={api_key}&pageSize=3", timeout=5)
-        data = response.json()
-        headlines = [article['title'] for article in data.get('articles', [])]
-        if not headlines:
-            response = requests.get(f"https://newsapi.org/v2/top-headlines?country=us&apiKey={api_key}&pageSize=3", timeout=5)
-            headlines = [article['title'] for article in response.json().get('articles', [])]
-        return "Top News:\n" + "\n".join(f"- {h}" for h in headlines)
-    except Exception as e:
-        return "Could not fetch news."
+
 
 def update_user_city(city: str) -> str:
     """Updates the user's city in their profile."""
@@ -163,11 +149,35 @@ def update_user_city(city: str) -> str:
     except Exception as e:
         return f"Error updating city: {str(e)}"
 
-# ==========================================
-# AGENTS
-# ==========================================
-def run_agent(agent_name: str, prompt: str, tools: list, role_description: str) -> str:
-    """Generic function to run an agent with J.A.R.V.I.S. memory injected."""
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+import base64
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=4))
+def _generate_with_retry(model_name: str, prompt: str, tools: list, system_instruction: str, image_base64: str = None) -> str:
+    chat = client.chats.create(
+        model=model_name,
+        config=types.GenerateContentConfig(
+            tools=tools,
+            system_instruction=system_instruction
+        )
+    )
+    
+    contents = [prompt]
+    if image_base64:
+        try:
+            header, encoded = image_base64.split(",", 1)
+            mime_type = header.split(":")[1].split(";")[0]
+            contents.append(
+                types.Part.from_bytes(data=base64.b64decode(encoded), mime_type=mime_type)
+            )
+        except Exception:
+            pass # fallback to text if image parsing fails
+            
+    return chat.send_message(contents).text
+
+def run_agent(agent_name: str, prompt: str, tools: list, role_description: str, image_base64: str = None) -> str:
+    """Generic function to run an agent with J.A.R.V.I.S. memory injected and auto-retry."""
     user_profile = fetch_user_profile()
     
     full_instruction = f"""
@@ -178,14 +188,19 @@ def run_agent(agent_name: str, prompt: str, tools: list, role_description: str) 
     Always use the provided facts about the user to tailor your responses.
     """
     
-    chat = client.chats.create(
-        model="gemini-3.5-flash",
-        config=types.GenerateContentConfig(
-            tools=tools,
-            system_instruction=full_instruction
-        )
-    )
-    return chat.send_message(prompt).text
+    try:
+        # Primary Model (Gemini 2.5 Flash)
+        return _generate_with_retry("gemini-2.5-flash", prompt, tools, full_instruction, image_base64)
+    except Exception as e:
+        # Fallback Model (Gemini 3.1 Flash Lite) if rate limited
+        if "429" in str(e) or "quota" in str(e).lower():
+            try:
+                return _generate_with_retry("gemini-3.1-flash-lite", prompt, tools, full_instruction, image_base64)
+            except Exception as fallback_e:
+                print(f"Fallback Error: {fallback_e}")
+                return "LIVORA is experiencing extremely high traffic right now. Please give me a moment to reorganize my thoughts."
+        print(f"System Error: {e}")
+        return "I encountered a system error while processing that request."
 
 def generate_morning_briefing() -> str:
     """Generates the automatic morning briefing based on the user's profile."""
@@ -214,10 +229,10 @@ def generate_morning_briefing() -> str:
         """
         
         chat = client.chats.create(
-            model="gemini-3.5-flash",
+            model="gemini-2.5-flash",
             config=types.GenerateContentConfig(
-                tools=[get_live_weather, get_personalized_news],
-                system_instruction="You are LIVORA generating the daily morning briefing."
+                tools=[get_live_weather],
+                system_instruction="You are LIVORA generating the daily morning briefing. Use get_live_weather for their city."
             )
         )
         briefing = chat.send_message(prompt).text
@@ -232,62 +247,71 @@ def generate_morning_briefing() -> str:
     except Exception as e:
         return f"Good morning! I tried to generate your briefing but encountered an error: {str(e)}"
 
-def process_chat(user_input: str) -> str:
+def process_chat(user_input: str, image_base64: str = None) -> str:
     """
     The Main LIVORA Orchestrator routes the user input to the correct sub-agent.
     """
-    if user_input.strip() == "__TRIGGER_MORNING_BRIEFING__":
-        return generate_morning_briefing()
-        
-    if user_input.strip().startswith("__UPDATE_CITY__"):
-        city = user_input.replace("__UPDATE_CITY__", "").strip()
-        update_user_city(city)
-        return "City silently updated."
+    try:
+        if user_input.strip() == "__TRIGGER_MORNING_BRIEFING__":
+            return generate_morning_briefing()
+            
+        if user_input.strip().startswith("__UPDATE_CITY__"):
+            city = user_input.replace("__UPDATE_CITY__", "").strip()
+            update_user_city(city)
+            return "City silently updated."
 
-    route_prompt = f"""
-    Analyze the user's input and determine which agent should handle it.
-    Input: "{user_input}"
-    
-    Agents available:
-    - HOME: For meals, cooking, recipes, and shopping lists.
-    - WORK: For tasks, deadlines, to-do lists, and reminders.
-    - FAMILY: For calendar, appointments, and family events.
-    - GENERAL: For general greetings, chatting, OR IF THE USER IS TELLING YOU A FACT ABOUT THEMSELVES to remember.
-    
-    Reply ONLY with the exact word: HOME, WORK, FAMILY, or GENERAL.
-    """
-    
-    routing_decision = client.models.generate_content(
-        model="gemini-3.5-flash",
-        contents=route_prompt
-    ).text.strip().upper()
-    
-    if "HOME" in routing_decision:
-        return run_agent(
-            "HOME", 
-            user_input, 
-            [add_meal_to_plan, add_to_shopping_list], 
-            "You are the LIVORA Home Agent. You help the user plan meals and manage their shopping list. Be brief, warm, and helpful."
-        )
-    elif "WORK" in routing_decision:
-        return run_agent(
-            "WORK", 
-            user_input, 
-            [add_work_task], 
-            "You are the LIVORA Work Agent. You help the user manage tasks and deadlines. Be brief, professional, and efficient."
-        )
-    elif "FAMILY" in routing_decision:
-        return run_agent(
-            "FAMILY", 
-            user_input, 
-            [add_family_appointment], 
-            "You are the LIVORA Family Agent. You help manage appointments and family schedules. Be brief, caring, and organized."
-        )
-    else:
-        # General/Memory Agent
-        return run_agent(
-            "GENERAL", 
-            user_input, 
-            [save_memory, get_live_weather, get_personalized_news, update_user_city], 
-            "You are LIVORA, a premium AI Life Orchestration System (like J.A.R.V.I.S.). If the user tells you a fact about themselves, their family, or their preferences, ALWAYS use the save_memory tool to remember it. You can also fetch weather and news, or update their city if they tell you where they live. Be warm, brief, and helpful."
-        )
+        route_prompt = f"""
+        Analyze the user's input and determine which agent should handle it.
+        Input: "{user_input}"
+        
+        Agents available:
+        - HOME: For meals, cooking, recipes, and shopping lists.
+        - WORK: For tasks, deadlines, to-do lists, and reminders.
+        - FAMILY: For calendar, appointments, and family events.
+        - GENERAL: For general greetings, chatting, OR IF THE USER IS TELLING YOU A FACT ABOUT THEMSELVES to remember.
+        
+        Reply ONLY with the exact word: HOME, WORK, FAMILY, or GENERAL.
+        """
+        
+        routing_decision = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=route_prompt
+        ).text.strip().upper()
+        
+        if "HOME" in routing_decision:
+            return run_agent(
+                "HOME", 
+                user_input, 
+                [add_meal_to_plan, add_to_shopping_list], 
+                "You are the LIVORA Home Agent. You help the user plan meals and manage their shopping list. If the user provides an image, identify the ingredients and suggest recipes. Be brief, warm, and helpful.",
+                image_base64
+            )
+        elif "WORK" in routing_decision:
+            return run_agent(
+                "WORK", 
+                user_input, 
+                [add_work_task], 
+                "You are the LIVORA Work Agent. You help the user manage tasks and deadlines. Be brief, professional, and efficient.",
+                image_base64
+            )
+        elif "FAMILY" in routing_decision:
+            return run_agent(
+                "FAMILY", 
+                user_input, 
+                [add_family_appointment], 
+                "You are the LIVORA Family Agent. You help manage appointments and family schedules. Be brief, caring, and organized.",
+                image_base64
+            )
+        else:
+            # General/Memory Agent
+            return run_agent(
+                "GENERAL", 
+                user_input, 
+                [save_memory, get_live_weather, update_user_city], 
+                "You are LIVORA, a premium AI Life Orchestration System (like J.A.R.V.I.S.). VERY IMPORTANT: If the user tells you their name, city, job, family size, or any personal fact, you MUST explicitly call the save_memory tool BEFORE responding, and then tell them you noted it! You can also fetch weather. Be warm, brief, and helpful.",
+                image_base64
+            )
+    except Exception as outer_e:
+        import traceback
+        traceback.print_exc()
+        return "Critical Route Error."

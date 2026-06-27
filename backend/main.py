@@ -30,14 +30,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from typing import Optional
+
 class ChatRequest(BaseModel):
     message: str
+    image: Optional[str] = None
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
     # Pass user message to LIVORA Orchestrator
     try:
-        reply = process_chat(request.message)
+        reply = process_chat(request.message, request.image)
         return {"response": reply}
     except Exception as e:
         error_msg = str(e)

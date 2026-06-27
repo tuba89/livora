@@ -1,10 +1,12 @@
-# 👑 LIVORA: I Built JARVIS for Working Mothers
+<img src="frontend/public/logo.png" width="120" align="right" alt="LIVORA Logo" />
+
+# LIVORA: I Built JARVIS for Working Mothers
 
 > **Kaggle 5-Day AI Agents Capstone | Concierge Agents Track**
 > 
 > *A mobile-first AI Life Intelligence System powered by Google ADK multi-agent architecture — because every woman deserves an intelligent assistant that knows her, remembers her, and never lets her down.*
 
-## 💜 Why I Built LIVORA
+## ✦ Why I Built LIVORA
 
 I am a fullstack developer working from home. I am also a wife and a mother.
 
@@ -24,7 +26,7 @@ This is LIVORA. She is the assistant I always needed.
 
 ---
 
-## 🏗️ Architecture
+## ◈ Architecture
 
 LIVORA is built on a robust multi-agent graph architecture powered by Google's ADK and Gemini 1.5 Flash. The system is designed for progressive disclosure, meaning specialized sub-agents are only invoked when their specific domain expertise is required, keeping token usage minimal and responses lightning-fast.
 
@@ -51,7 +53,7 @@ graph TD
     MCP --> News[NewsAPI.org]
 ```
 
-## ✨ Key Features (The "Real LIVORA" Vision)
+## ✦ Key Features (The "Real LIVORA" Vision)
 
 1. **The Automatic Morning Briefing**
    - Automatically detects your location via the HTML5 Geolocation API.
@@ -71,15 +73,34 @@ graph TD
 4. **Voice Interface (Web Speech API)**
    - A sleek microphone UI allows you to speak directly to LIVORA. She transcribes your audio and executes commands hands-free.
 
-## 🛠️ The Capstone Checkpoints
+## ■ The Capstone Checkpoints
 
-- [x] **Agent / Multi-agent system (ADK)**: Built a complex routing graph orchestrating 4 distinct domain agents.
-- [x] **MCP Server**: Built a custom FastMCP server (`mcp_server.py`) exposing LIVORA's core context tools (Weather, News, Diagnostics) as standardized endpoints.
+- [x] **Agent / Multi-agent system (ADK)**: Built a complex routing graph orchestrating 4 distinct domain agents, powered by `gemini-2.5-flash` and Google Search Grounding.
+- [x] **MCP Server**: Built a custom FastMCP server (`mcp_server.py`) exposing a massive 10-Tool suite (Weather, News, Memory, Calendar Agenda, Shopping).
 - [x] **Security Features**: Secured Postgres database using strict Row Level Security (RLS) policies and implemented rigorous `.env` secret management.
-- [x] **Agent Skills**: Built 3 custom `SKILL.md` files for meal-planning, task-management, and shopping. Skills use progressive disclosure—only loaded when triggered, keeping token budgets minimal.
-- [x] **Deployability**: Fully containerized and demonstrated via the video pitch.
+- [x] **Agent Skills**: Built 3 custom `SKILL.md` files for meal-planning, task-management, and morning-briefing. 
+- [x] **Deployability**: Fully PWA-ready with Vercel and Railway deployment configurations.
+- [x] **Agentic UI**: Built a stunning glassmorphic React interface featuring Multimodal Camera input (Vision) and Voice Text-To-Speech (Web Speech API).
 
-## 🚀 Local Setup Instructions
+## ⯈ Live Deployment Guide
+
+LIVORA is production-ready for the cloud. Follow these steps to host your own:
+
+### 1. Deploy the Backend (Railway.app)
+1. Fork this repository.
+2. Go to [Railway.app](https://railway.app/) and create a new project from your repo.
+3. Select the `backend` folder as the root directory.
+4. Add the Environment Variables from `.env.example` (Supabase, Gemini).
+5. Railway will automatically detect FastAPI and deploy the API securely.
+
+### 2. Deploy the Frontend & PWA (Vercel)
+1. Go to [Vercel.com](https://vercel.com/) and import your repo.
+2. Set the Root Directory to `frontend`.
+3. Vercel automatically detects Vite and React. 
+4. **Important**: Update `App.jsx` fetch URLs to point to your new Railway backend URL instead of `localhost:8000`.
+5. Deploy! LIVORA will now be available globally, and users can "Add to Home Screen" as a native PWA App.
+
+## ⯈ Local Setup Instructions
 
 1. **Database Setup (Supabase)**
    Create the following tables: `user_profile`, `user_memory`, `daily_briefing`, `meals`, `shopping_lists`, `tasks`, `appointments`.
